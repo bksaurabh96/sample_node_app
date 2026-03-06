@@ -1,0 +1,46 @@
+name: Build and deploy Node app to Azure Web App
+
+on:
+  push:
+    branches:
+      - psql
+
+env:
+  AZURE_WEBAPP_NAME: intv-test-node-app        # <- your App Service name
+  AZURE_WEBAPP_PACKAGE_PATH: '.'              # app root
+  NODE_VERSION: '18.x'
+
+jobs:
+  build-and-deploy:
+    environment: dev
+    runs-on:
+      group: cvs-linux-self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests (optional)
+        run: npm test
+        if: false # flip to true when you add tests
+
+      - name: Archive production artifacts
+        run: |
+          mkdir -p build
+          cp -R package.json package-lock.json server.js build/
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: 'production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
